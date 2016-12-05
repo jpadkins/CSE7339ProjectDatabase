@@ -6,6 +6,7 @@ from enum import Enum
 class API(Enum):
     DRIVE, DROPBOX, BOX = range(3)
 
+
 class CloudStorageAppDatabase(object):
     def __init__(self, db_file='sqlite3.db'):
         self.__conn=sqlite3.connect(db_file)
@@ -125,3 +126,29 @@ class CloudStorageAppDatabase(object):
             return res.fetchall()[0]
         else:
             return False
+
+class CredentialsWrapper(object):
+    def __init__(self, username, password, db_file='sqlite3.db'):
+        self.__username = username
+        self.__password = password
+        self.db = CloudStorageAppDatabase(db_file)
+
+    def add_user(self):
+        return self.db.add_user(self.__username, self.__password)
+
+    def set_auth_token(self, api, token):
+        return self.db.set_auth_token(self.__username, api, token)
+
+    def get_auth_token(self, api):
+        return self.db.get_auth_token(self.__username, api)
+
+    def add_local_file_and_key(self, filename, data, key):
+        return self.db.add_local_file_and_key(self.__username, self.__password,
+                                              filename, data, key)
+
+    def get_local_file_and_key(self, filename):
+        return self.db.get_local_file_and_key(self.__username, self.__password,
+                                              filename)
+
+    def get_local_file_names(self, username, password):
+        return self.db.get_local_file_names(self.__username, self.__password)
