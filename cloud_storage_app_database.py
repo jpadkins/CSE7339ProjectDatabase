@@ -18,7 +18,7 @@ class CloudStorageAppDatabase(object):
         self.__conn.commit()
         stmt = \
                """ CREATE TABLE IF NOT EXISTS files
-               (filename TEXT, data BLOB, key TEXT, user_id INTEGER,
+               (filename TEXT, data BLOB, key BLOB, user_id INTEGER,
                FOREIGN KEY(user_id) REFERENCES user(rowid)) """
         self.__conn.cursor().execute(stmt)
         self.__conn.commit()
@@ -59,6 +59,19 @@ class CloudStorageAppDatabase(object):
             return True
         else:
             return False
+
+    # check if user exists in the database by username and password
+    def user_credentials_correct(self, username, password):
+        if self.__username_exists(username):
+            query = \
+                    "SELECT rowid, password_hash, salt FROM users "\
+                    "WHERE username=?"
+            res = self.__conn.cursor().execute(query, [username])
+            user_id, password_hash, salt = res.fetchall()[0]
+            check_hash = hashlib.sha512((salt+password).encode('utf-8')).hexdigest()
+            if password_hash == check_hash:
+                return True
+        return False
 
     # set the auth token in the database
     def set_auth_token(self, username, api, token):
@@ -101,7 +114,7 @@ class CloudStorageAppDatabase(object):
         if user_id:
             stmt = "INSERT INTO files VALUES (?,?,?,?)"
             self.__conn.cursor().execute(stmt, [filename, memoryview(data),
-                                                key, user_id])
+                                                memoryview(key), user_id])
             self.__conn.commit()
             return True
         else:
@@ -113,7 +126,8 @@ class CloudStorageAppDatabase(object):
         if user_id:
             stmt = "SELECT data, key FROM files WHERE filename=? and user_id=?"
             res = self.__conn.cursor().execute(stmt, [filename, user_id])
-            return str(res.fetchone()[0])
+            filedata, key = res.fetchall()[0]
+            return (str(filedata), str(key))
         else:
             return False
 
